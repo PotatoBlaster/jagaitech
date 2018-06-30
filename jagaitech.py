@@ -20,6 +20,15 @@ def toTime(time):
     hours = str(hours).zfill(2)
     return(hours+":"+minutes+":"+seconds)
 
+def simpleEval(arg):
+    if arg == "None":
+        arg = None
+    if arg == "False":
+        arg = False
+    if arg == "True":
+        arg = True
+    return arg
+
 @bot.event
 async def on_ready():
     print (bot.user.name)
@@ -50,39 +59,177 @@ async def on_ready():
     global kdmrpstarted
     global kdmrptimestarted
     global kdmrpdoc
-    arp = None
-    rrp = None
-    arpstarted = False
-    arptimestarted = None
-    rrpstarted = False
-    rrptimestarted = None
-    arphost = None
-    rrphost = None
-    arpdoc = None
-    rrpdoc = None
-    cqrphost = None
-    cqrpstarted = False
-    cqrptimestarted = None
-    cqrpdoc = None
-    tnrrphost = None
-    tnrrpstarted = False
-    tnrrptimestarted = None
-    tnrrpdoc = None
-    dndrphost = None
-    dndrpstarted = False
-    dndrptimestarted = None
-    dndrpdoc = None
-    kdmrphost = None
-    kdmrpstarted = False
-    kdmrptimestarted = None
-    kdmrpdoc = None
+    arr = [None,None,False,None,False,None,None,None,None,None,None,False,None,None,None,False,None,None,None,False,None,None,None,False,None,None]
+    arp = arr[0]
+    rrp = arr[1]
+    arpstarted = arr[2]
+    arptimestarted = arr[3]
+    rrpstarted = arr[4]
+    rrptimestarted = arr[5]
+    arphost = arr[6]
+    rrphost = arr[7]
+    arpdoc = arr[8]
+    rrpdoc = arr[9]
+    cqrphost = arr[10]
+    cqrpstarted = arr[11]
+    cqrptimestarted = arr[12]
+    cqrpdoc = arr[13]
+    tnrrphost = arr[14]
+    tnrrpstarted = arr[15]
+    tnrrptimestarted = arr[16]
+    tnrrpdoc = arr[17]
+    dndrphost = arr[18]
+    dndrpstarted = arr[19]
+    dndrptimestarted = arr[20]
+    dndrpdoc = arr[21]
+    kdmrphost = arr[22]
+    kdmrpstarted = arr[23]
+    kdmrptimestarted = arr[24]
+    kdmrpdoc = arr[25]
+
+@bot.command(pass_context=True)
+async def arr(ctx):
+    global arp
+    global rrp
+    global arpstarted
+    global arptimestarted
+    global rrpstarted
+    global rrptimestarted
+    global arphost
+    global rrphost
+    global arpdoc
+    global rrpdoc
+    global cqrphost
+    global cqrpstarted
+    global cqrptimestarted
+    global cqrpdoc
+    global tnrrphost
+    global tnrrpstarted
+    global tnrrptimestarted
+    global tnrrpdoc
+    global dndrphost
+    global dndrpstarted
+    global dndrptimestarted
+    global dndrpdoc
+    global kdmrphost
+    global kdmrpstarted
+    global kdmrptimestarted
+    global kdmrpdoc
+    if str(ctx.message.author.id) == "154552600073601024":
+        await bot.say("["+str(arp)+","+str(rrp)+","+str(arpstarted)+","+str(arptimestarted)+","+str(rrpstarted)+","+str(rrptimestarted)+","+str(arphost)+","+str(rrphost)+","+str(arpdoc)+","+str(rrpdoc)+","+str(cqrphost)+","+str(cqrpstarted)+","+str(cqrptimestarted)+","+str(cqrpdoc)+","+str(tnrrphost)+","+str(tnrrpstarted)+","+str(tnrrptimestarted)+","+str(tnrrpdoc)+","+str(dndrphost)+","+str(dndrpstarted)+","+str(dndrptimestarted)+","+str(dndrpdoc)+","+str(kdmrphost)+","+str(kdmrpstarted)+","+str(kdmrptimestarted)+","+str(kdmrpdoc)+"]")
+        return
+    else:
+        embed = discord.Embed(title="User cannot use this command.")
+        await bot.say(embed=embed)
+
+@bot.command(pass_context=True)
+async def setvar(ctx,*,arr):
+    global arp
+    global rrp
+    global arpstarted
+    global arptimestarted
+    global rrpstarted
+    global rrptimestarted
+    global arphost
+    global rrphost
+    global arpdoc
+    global rrpdoc
+    global cqrphost
+    global cqrpstarted
+    global cqrptimestarted
+    global cqrpdoc
+    global tnrrphost
+    global tnrrpstarted
+    global tnrrptimestarted
+    global tnrrpdoc
+    global dndrphost
+    global dndrpstarted
+    global dndrptimestarted
+    global dndrpdoc
+    global kdmrphost
+    global kdmrpstarted
+    global kdmrptimestarted
+    global kdmrpdoc
+    if str(ctx.message.author.id) == "154552600073601024":
+        arr = str(arr)
+        arr = arr[1:-1]
+        arr = arr.split(",")
+        if not len(arr) == 26:
+            await bot.say("There are not enough arguments.")
+            return
+        arr = list(map(simpleEval, arr))
+        arp = arr[0]
+        rrp = arr[1]
+        arpstarted = arr[2]
+        arptimestarted = arr[3]
+        rrpstarted = arr[4]
+        rrptimestarted = arr[5]
+        arphost = arr[6]
+        rrphost = arr[7]
+        arpdoc = arr[8]
+        rrpdoc = arr[9]
+        cqrphost = arr[10]
+        cqrpstarted = arr[11]
+        cqrptimestarted = arr[12]
+        cqrpdoc = arr[13]
+        tnrrphost = arr[14]
+        tnrrpstarted = arr[15]
+        tnrrptimestarted = arr[16]
+        tnrrpdoc = arr[17]
+        dndrphost = arr[18]
+        dndrpstarted = arr[19]
+        dndrptimestarted = arr[20]
+        dndrpdoc = arr[21]
+        kdmrphost = arr[22]
+        kdmrpstarted = arr[23]
+        kdmrptimestarted = arr[24]
+        kdmrpdoc = arr[25]
+        await bot.say("setvar successful.")
+    else:
+        embed = discord.Embed(title="User cannot use this command.")
+        await bot.say(embed=embed)
+        
 
 @bot.command(pass_context=True)
 async def say(ctx, *, arg):
     if str(ctx.message.author.id) == "154552600073601024":
         await bot.say(arg)
     else:
-        embed = discord.Embed(title="User is too much of a skrub to use this command.")
+        embed = discord.Embed(title="User cannot use this command.")
+        await bot.say(embed=embed)
+
+@bot.command(pass_context=True)
+async def whatis(ctx, *, arg):
+    global arp
+    global rrp
+    global arpstarted
+    global arptimestarted
+    global rrpstarted
+    global rrptimestarted
+    global arphost
+    global rrphost
+    global arpdoc
+    global rrpdoc
+    global cqrphost
+    global cqrpstarted
+    global cqrptimestarted
+    global cqrpdoc
+    global tnrrphost
+    global tnrrpstarted
+    global tnrrptimestarted
+    global tnrrpdoc
+    global dndrphost
+    global dndrpstarted
+    global dndrptimestarted
+    global dndrpdoc
+    global kdmrphost
+    global kdmrpstarted
+    global kdmrptimestarted
+    global kdmrpdoc
+    if str(ctx.message.author.id) == "154552600073601024":
+        await bot.say(globals()[arg])
+    else:
+        embed = discord.Embed(title="User cannot use this command.")
         await bot.say(embed=embed)
 
 @bot.command(aliases=["dice"])
@@ -583,7 +730,7 @@ async def removehost(ctx):
 
 @bot.command(pass_context=True,aliases=["sd"])
 @commands.has_any_role("Staff","Voice")
-async def setdoc(ctx, doc):
+async def setdoc(ctx, *, doc):
     global arp
     global rrp
     global arpdoc
