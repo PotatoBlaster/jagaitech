@@ -29,7 +29,7 @@ def idToString(arg):
 #for listreplace to work properly
 
 def channelindex(arg):
-    rplist = ['customs-one','customs-two','conquest','trainer','dungeons-n-dragonites','kingdom','pokéhigh','murder-mystery','good-vs-evil']
+    rplist = ['official-rp','custom-rp']
     if arg in rplist:
         return rplist.index(arg)
 #check channel
@@ -43,11 +43,13 @@ async def on_ready():
     global rptimestarted
     global rphost
     global rpdoc
-    rp = [None, None, 'Conquest', 'Trainer', 'Dungeons & Dragonites', 'Kingdom', 'Pokéhigh', 'Murder Mystery', 'Good vs Evil']
-    rpstarted = [False, False, False, False, False, False, False, False, False]
-    rptimestarted = [None, None, None, None, None, None, None, None, None]
-    rphost = [None, None, None, None, None, None, None, None, None]
-    rpdoc = [None, None, None, None, None, None, None, None, None]
+    global rpvoid
+    rp = [None, None]
+    rpstarted = [False, False]
+    rptimestarted = [None, None]
+    rphost = [None, None]
+    rpdoc = [None, None]
+    rpvoid = [None, None, None, None]
 
 @bot.command(pass_context=True)
 async def whatis(ctx, *, arg):
@@ -74,6 +76,9 @@ async def replace(ctx, *, arg):
         arg = arg.split(',')
         if len(arg) == 3:
             index = channelindex(arg[1])
+            arg[2] = ast.literal_eval(arg[2])
+            if arg[0] == "rphost":
+                arg[2] = idToString(arg[2])
             globals()[arg[0]][index] = arg[2]
             await bot.say("Replace successful.")
 #replaces specific value
@@ -142,12 +147,11 @@ async def setrp(ctx,*,roleplay):
     global rp
     global rpstarted
     index = channelindex(ctx.message.channel.name)
-    if index == 0 or index == 1:
-        rp[index] = roleplay
-        embed = discord.Embed(title="The RP was set to "+str(roleplay)+". Use .start to start the RP.")
-        if rpstarted[index]:
-            embed = discord.Embed(title="The RP was set to "+str(roleplay)+".")
-        await bot.say(embed=embed)
+    rp[index] = roleplay
+    embed = discord.Embed(title="The RP was set to "+str(roleplay)+". Use .start to start the RP.")
+    if rpstarted[index]:
+        embed = discord.Embed(title="The RP was set to "+str(roleplay)+".")
+    await bot.say(embed=embed)
 
 @bot.command(pass_context=True,aliases=["startrp","rpstart"])
 @commands.has_any_role("Staff","Voice","Host")
@@ -157,32 +161,18 @@ async def start(ctx):
     global rptimestarted
     global rphost
     index = channelindex(ctx.message.channel.name)
-    if index == 0 or index == 1:
-        if rp[index] == None:
-            embed = discord.Embed(title="No RP has been set.")
-            await bot.say(embed=embed)
-            return
-        if rpstarted[index]:
-            embed = discord.Embed(title="The RP has already started.")
-            await bot.say(embed=embed)
-            return
-        rpstarted[index] = True
-        rptimestarted[index] = time.time()
-        embed = discord.Embed(title="The RP has started.")
+    if rp[index] == None:
+        embed = discord.Embed(title="No RP has been set.")
         await bot.say(embed=embed)
-    if index > 1:
-        if rphost[index] == None:
-            embed = discord.Embed(title="Please set a host first.")
-            await bot.say(embed=embed)
-            return
-        if rpstarted[index]:
-            embed = discord.Embed(title="The RP has already started.")
-            await bot.say(embed=embed)
-            return
-        rpstarted[index] = True
-        rptimestarted[index] = time.time()
-        embed = discord.Embed(title="The RP has started.")
+        return
+    if rpstarted[index]:
+        embed = discord.Embed(title="The RP has already started.")
         await bot.say(embed=embed)
+        return
+    rpstarted[index] = True
+    rptimestarted[index] = time.time()
+    embed = discord.Embed(title="The RP has started.")
+    await bot.say(embed=embed)
 
 @bot.command(pass_context=True,aliases=["rp","arpee","host","doc"])
 async def roleplay(ctx):
@@ -192,16 +182,14 @@ async def roleplay(ctx):
     global rphost
     global rpdoc
     index = channelindex(ctx.message.channel.name)
-    if index == 0 or index == 1:
-        if rp[index] == None:
-            embed = discord.Embed(title="There is no RP.")
-            await bot.say(embed=embed)
-            return
-    else:
-        if rphost[index] == None:
-            embed = discord.Embed(title="There is no RP.")
-            await bot.say(embed=embed)
-            return
+    if ctx.message.channel.name == "freeroam":
+        embed = discord.Embed(title="The RP is Freeroam.")
+        await bot.say(embed=embed)
+        return
+    if rp[index] == None:
+        embed = discord.Embed(title="There is no RP.")
+        await bot.say(embed=embed)
+        return
     if not rpstarted[index]:
         embed = discord.Embed(title="The RP is "+str(rp[index])+". Use .start to start the RP.")
     else:
@@ -212,6 +200,49 @@ async def roleplay(ctx):
         embed.add_field(name="Doc:",value=rpdoc[index],inline=False)
     await bot.say(embed=embed)
 
+@bot.command(pass_context=True)
+async def void(ctx):
+    global rpstarted
+    global rpvoid
+    index = channelindex(ctx.message.channel.name)
+    if not rpstarted[index]:
+        if not rpvoid[2*index+1] == None:
+            if not rpvoid[2*index] == None:
+                embed = discord.Embed(title="Void: "+rpvoid[2*index+1]+", "+rpvoid[2*index])
+            else:
+                embed = discord.Embed(title="Void: "+rpvoid[2*index+1])
+        else:
+            embed = discord.Embed(title="No RPs are void.")
+        await bot.say(embed=embed)
+
+@bot.command(pass_context=True,aliases=["vr"])
+@commands.has_any_role("Staff","Voice")
+async def voidreset(ctx):
+    global rpstarted
+    global rpvoid
+    index = channelindex(ctx.message.channel.name)
+    if not rpstarted[index]:
+        rpvoid[2*index+1] = None
+        rpvoid[2*index] = None
+        embed = discord.Embed(title="Void reset successful.")
+        await bot.say(embed=embed)
+
+@bot.command(pass_context=True,aliases=["sv"])
+@commands.has_any_role("Staff","Voice")
+async def setvoid(ctx,*,arg):
+    global rpstarted
+    global rpvoid
+    index = channelindex(ctx.message.channel.name)
+    if not rpstarted[index]:
+        arg = arg.split(",")
+        if not len(arg) == 2:
+            embed = discord.Embed(title="Invalid number of arguments.")
+            await bot.say(embed=embed)
+        rpvoid[2*index] = arg[0]
+        rpvoid[2*index+1] = arg[1]
+        embed = discord.Embed(title="The void has been set to "+rpvoid[2*index]+" and "+rpvoid[2*index+1]+".")
+        await bot.say(embed=embed)
+
 @bot.command(pass_context=True,aliases=["rpend"])
 @commands.has_any_role("Staff","Voice","Host")
 async def endrp(ctx):
@@ -220,29 +251,32 @@ async def endrp(ctx):
     global rptimestarted
     global rphost
     global rpdoc
+    global rpvoid
     index = channelindex(ctx.message.channel.name)
-    role = get(ctx.message.server.roles, id="host id here")
-    if index == 0 or index == 1:
-        if rp[index] == None:
-            embed = discord.Embed(title="There is no RP.")
-            await bot.say(embed=embed)
-            return
-    else:
-        if rphost[index] == None:
-            embed = discord.Embed(title="There is no RP.")
-            await bot.say(embed=embed)
-            return
+    role = get(ctx.message.server.roles, id="461386257822384138")
+    if rp[index] == None:
+        embed = discord.Embed(title="There is no RP.")
+        await bot.say(embed=embed)
+        return
     if not rpstarted[index]:
         embed = discord.Embed(title="The RP has ended.")
     else:
         embed = discord.Embed(title="The RP has ended.",description="After "+toTime(time.time()-rptimestarted[index]))
-    if index == 0 or index == 1:
-        rp[index] = None
+    if rpstarted[index]:
+        if toTime(time.time()-rptimestarted[index]) >= 900:
+            rpvoid[2*index] = rpvoid[2*index+1]
+            rpvoid[2*index+1] = rp[index]
+    if not rpvoid[2*index+1] == None:
+        if not rpvoid[2*index] == None:
+            embed.add_field(name="Void:",value=rpvoid[2*index+1]+", "+rpvoid[2*index])
+        else:
+            embed.add_field(name="Void:",value=rpvoid[2*index+1])
+    rp[index] = None
     rpstarted[index] = False
     rptimestarted[index] = None
     if not rphost[index] == None:
         host = ctx.message.server.get_member(rphost[index])
-        if "host id here" in [y.id for y in host.roles]:
+        if "461386257822384138" in [y.id for y in host.roles]:
             await bot.remove_roles(host,role)
     rphost[index] = None
     rpdoc[index] = None
@@ -254,15 +288,14 @@ async def sethost(ctx,user:discord.Member):
     global rp
     global rphost
     index = channelindex(ctx.message.channel.name)
-    role = get(ctx.message.server.roles, id="host id here")
-    if index == 0 or index == 1:
-        if rp[index] == None:
-            embed = discord.Embed(title="There is no RP.")
-            await bot.say(embed=embed)
-            return
+    role = get(ctx.message.server.roles, id="461386257822384138")
+    if rp[index] == None:
+        embed = discord.Embed(title="There is no RP.")
+        await bot.say(embed=embed)
+        return
     if not rphost[index] == None:
         host = ctx.message.server.get_member(rphost[index])
-        if "host id here" in [y.id for y in host.roles]:
+        if "461386257822384138" in [y.id for y in host.roles]:
             await bot.remove_roles(host,role)
     rphost[index] = user.id
     await bot.add_roles(user,role)
@@ -276,16 +309,10 @@ async def setdoc(ctx, *, doc):
     global rphost
     global rpdoc
     index = channelindex(ctx.message.channel.name)
-    if index == 0 or index == 1:
-        if rp[index] == None:
-            embed = discord.Embed(title="There is no RP.")
-            await bot.say(embed=embed)
-            return
-    else:
-        if rphost[index] == None:
-            embed = discord.Embed(title="There is no RP. Please set a host first.")
-            await bot.say(embed=embed)
-            return
+    if rp[index] == None:
+        embed = discord.Embed(title="There is no RP.")
+        await bot.say(embed=embed)
+        return
     doc = str(doc)
     rpdoc[index] = doc
     embed = discord.Embed(title="The doc has been set to "+doc+".")
@@ -298,16 +325,10 @@ async def removedoc(ctx):
     global rpdoc
     global rphost
     index = channelindex(ctx.message.channel.name)
-    if index == 0 or index == 1:
-        if rp[index] == None:
-            embed = discord.Embed(title="There is no RP.")
-            await bot.say(embed=embed)
-            return
-    else:
-        if rphost[index] == None:
-            embed = discord.Embed(title="There is no RP.")
-            await bot.say(embed=embed)
-            return
+    if rp[index] == None:
+        embed = discord.Embed(title="There is no RP.")
+        await bot.say(embed=embed)
+        return
     if rpdoc[index] == None:
         embed = discord.Embed(title="There is no doc.")
         await bot.say(embed=embed)
