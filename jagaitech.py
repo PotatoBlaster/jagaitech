@@ -58,6 +58,7 @@ async def whatis(ctx, *, arg):
     global rptimestarted
     global rphost
     global rpdoc
+    global rpvoid
     if ctx.message.author.id == "154552600073601024":
         arg = arg.split(',')
         if len(arg) == 2:
@@ -72,6 +73,7 @@ async def replace(ctx, *, arg):
     global rptimestarted
     global rphost
     global rpdoc
+    global rpvoid
     if ctx.message.author.id == "154552600073601024":
         arg = arg.split(',')
         if len(arg) == 3:
@@ -79,7 +81,11 @@ async def replace(ctx, *, arg):
             arg[2] = ast.literal_eval(arg[2])
             if arg[0] == "rphost":
                 arg[2] = idToString(arg[2])
-            globals()[arg[0]][index] = arg[2]
+            if not arg[0] == "rpvoid":
+                globals()[arg[0]][index] = arg[2]
+            else:
+                await bot.say("Please use .listreplace instead.")
+                return
             await bot.say("Replace successful.")
 #replaces specific value
 
@@ -90,12 +96,14 @@ async def arr(ctx):
     global rptimestarted
     global rphost
     global rpdoc
+    global rpvoid
     if ctx.message.author.id == "154552600073601024":
         await bot.say(rp)
         await bot.say(rpstarted)
         await bot.say(rptimestarted)
         await bot.say(rphost)
         await bot.say(rpdoc)
+        await bot.say(rpvoid)
 #returns values for listreplace
 
 @bot.command(pass_context=True)
@@ -105,9 +113,10 @@ async def listreplace(ctx, *, arg):
     global rptimestarted
     global rphost
     global rpdoc
+    global rpvoid
     if ctx.message.author.id == "154552600073601024":
         arg = arg.split(',',1)
-        if len(arg) == 2:
+        if len(arg) == 2 or arg[0] == "rpvoid":
             await bot.say(arg[0])
             await bot.say(arg[1])
             replacelist = ast.literal_eval(arg[1])
@@ -142,7 +151,7 @@ async def pick(*, arg):
     await bot.say(embed=embed)
 
 @bot.command(pass_context=True,aliases=["rpset"])
-@commands.has_any_role("Staff","Voice")
+@commands.has_any_role("Staff","Voice","Host")
 async def setrp(ctx,*,roleplay):
     global rp
     global rpstarted
@@ -200,48 +209,48 @@ async def roleplay(ctx):
         embed.add_field(name="Doc:",value=rpdoc[index],inline=False)
     await bot.say(embed=embed)
 
-@bot.command(pass_context=True)
-async def void(ctx):
-    global rpstarted
-    global rpvoid
-    index = channelindex(ctx.message.channel.name)
-    if not rpstarted[index]:
-        if not rpvoid[2*index+1] == None:
-            if not rpvoid[2*index] == None:
-                embed = discord.Embed(title="Void: "+rpvoid[2*index+1]+", "+rpvoid[2*index])
-            else:
-                embed = discord.Embed(title="Void: "+rpvoid[2*index+1])
-        else:
-            embed = discord.Embed(title="No RPs are void.")
-        await bot.say(embed=embed)
+#@bot.command(pass_context=True)
+#async def void(ctx):
+#    global rpstarted
+#    global rpvoid
+#    index = channelindex(ctx.message.channel.name)
+#    if not rpstarted[index]:
+#        if not rpvoid[2*index+1] == None:
+#            if not rpvoid[2*index] == None:
+#                embed = discord.Embed(title="Void: "+rpvoid[2*index+1]+", "+rpvoid[2*index])
+#            else:
+#                embed = discord.Embed(title="Void: "+rpvoid[2*index+1])
+#        else:
+#            embed = discord.Embed(title="No RPs are void.")
+#        await bot.say(embed=embed)
 
-@bot.command(pass_context=True,aliases=["vr"])
-@commands.has_any_role("Staff","Voice")
-async def voidreset(ctx):
-    global rpstarted
-    global rpvoid
-    index = channelindex(ctx.message.channel.name)
-    if not rpstarted[index]:
-        rpvoid[2*index+1] = None
-        rpvoid[2*index] = None
-        embed = discord.Embed(title="Void reset successful.")
-        await bot.say(embed=embed)
+#@bot.command(pass_context=True,aliases=["vr"])
+#@commands.has_any_role("Staff","Voice")
+#async def voidreset(ctx):
+#    global rpstarted
+#    global rpvoid
+#    index = channelindex(ctx.message.channel.name)
+#    if not rpstarted[index]:
+#        rpvoid[2*index+1] = None
+#        rpvoid[2*index] = None
+#        embed = discord.Embed(title="Void reset successful.")
+#        await bot.say(embed=embed)
 
-@bot.command(pass_context=True,aliases=["sv"])
-@commands.has_any_role("Staff","Voice")
-async def setvoid(ctx,*,arg):
-    global rpstarted
-    global rpvoid
-    index = channelindex(ctx.message.channel.name)
-    if not rpstarted[index]:
-        arg = arg.split(",")
-        if not len(arg) == 2:
-            embed = discord.Embed(title="Invalid number of arguments.")
-            await bot.say(embed=embed)
-        rpvoid[2*index] = arg[0]
-        rpvoid[2*index+1] = arg[1]
-        embed = discord.Embed(title="The void has been set to "+rpvoid[2*index]+" and "+rpvoid[2*index+1]+".")
-        await bot.say(embed=embed)
+#@bot.command(pass_context=True,aliases=["sv"])
+#@commands.has_any_role("Staff","Voice")
+#async def setvoid(ctx,*,arg):
+#    global rpstarted
+#    global rpvoid
+#    index = channelindex(ctx.message.channel.name)
+#    if not rpstarted[index]:
+#        arg = arg.split(",")
+#        if not len(arg) == 2:
+#            embed = discord.Embed(title="Invalid number of arguments.")
+#            await bot.say(embed=embed)
+#        rpvoid[2*index] = arg[0]
+#        rpvoid[2*index+1] = arg[1]
+#        embed = discord.Embed(title="The void has been set to "+rpvoid[2*index]+" and "+rpvoid[2*index+1]+".")
+#        await bot.say(embed=embed)
 
 @bot.command(pass_context=True,aliases=["rpend"])
 @commands.has_any_role("Staff","Voice","Host")
@@ -262,15 +271,15 @@ async def endrp(ctx):
         embed = discord.Embed(title="The RP has ended.")
     else:
         embed = discord.Embed(title="The RP has ended.",description="After "+toTime(time.time()-rptimestarted[index]))
-    if rpstarted[index]:
-        if toTime(time.time()-rptimestarted[index]) >= 900:
-            rpvoid[2*index] = rpvoid[2*index+1]
-            rpvoid[2*index+1] = rp[index]
-    if not rpvoid[2*index+1] == None:
-        if not rpvoid[2*index] == None:
-            embed.add_field(name="Void:",value=rpvoid[2*index+1]+", "+rpvoid[2*index])
-        else:
-            embed.add_field(name="Void:",value=rpvoid[2*index+1])
+#    if rpstarted[index]:
+#        if time.time()-rptimestarted[index] >= 900:
+#            rpvoid[2*index] = rpvoid[2*index+1]
+#            rpvoid[2*index+1] = rp[index]
+#    if not rpvoid[2*index+1] == None:
+#        if not rpvoid[2*index] == None:
+#            embed.add_field(name="Void:",value=rpvoid[2*index+1]+", "+rpvoid[2*index])
+#        else:
+#            embed.add_field(name="Void:",value=rpvoid[2*index+1])
     rp[index] = None
     rpstarted[index] = False
     rptimestarted[index] = None
@@ -338,3 +347,4 @@ async def removedoc(ctx):
     await bot.say(embed=embed)
 
 bot.run("insert token here")
+#host role id is 461386257822384138
