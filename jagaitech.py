@@ -4,11 +4,14 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import Bot
 from discord.utils import get
+from operator import itemgetter
 import asyncio
 import time
 import math
 import random
 import ast
+import pickle
+import collections
 
 bot = commands.Bot(command_prefix='.')
 
@@ -29,10 +32,73 @@ def idToString(arg):
 #for listreplace to work properly
 
 def channelindex(arg):
-    rplist = ['official-rp','custom-rp']
+    rplist = ['official-rp','official-rp-2','custom-rp']
     if arg in rplist:
         return rplist.index(arg)
 #check channel
+
+def createrpdict():
+    f = open("rp","rb")
+    rpdict = pickle.load(f)
+    f.close
+    return rpdict
+#creates dictionary from pickled file
+
+def updaterpdict(arg1,arg2):
+    rpdict = createrpdict()
+    rpdict[arg1] = arg2
+    f = open("rp","wb")
+    pickle.dump(rpdict,f)
+    f.close()
+
+async def updatetriviarole(arg,server):
+    global triviascore
+    role1 = discord.utils.get(server.roles, name="Trivia")
+    role2 = discord.utils.get(server.roles, name="Trivia Knight")
+    role3 = discord.utils.get(server.roles, name="Trivia Lord")
+    role4 = discord.utils.get(server.roles, name="Trivia Nobleman")
+    role5 = discord.utils.get(server.roles, name="Trivia King")
+    if triviascore[arg.id] == 1:
+        rolelist = [role1,role2,role3,role4,role5]
+        intersection = [value for value in arg.roles if value in rolelist]
+        if intersection == []:
+            await bot.add_roles(arg,role1)
+            return
+    if triviascore["streak"] == 3:
+        rolelist = [role2,role3,role4,role5]
+        intersection = [value for value in arg.roles if value in rolelist]
+        if intersection == []:
+            await bot.remove_roles(arg,role1)
+            await bot.add_roles(arg,role2)
+            embed = discord.Embed(title=arg.name+" has reached "+role2.name+"!")
+            await bot.say(embed=embed)
+            return
+    if triviascore["streak"] == 5:
+        rolelist = [role3,role4,role5]
+        intersection = [value for value in arg.roles if value in rolelist]
+        if intersection == []:
+            await bot.remove_roles(arg,role2)
+            await bot.add_roles(arg,role3)
+            embed = discord.Embed(title=arg.name+" has reached "+role3.name+"!")
+            await bot.say(embed=embed)
+            return
+    if triviascore["streak"] == 8:
+        rolelist = [role4,role5]
+        intersection = [value for value in arg.roles if value in rolelist]
+        if intersection == []:
+            await bot.remove_roles(role3.id)
+            await bot.add_roles(role4.id)
+            embed = discord.Embed(title=arg.name+" has reached "+role4.name+"!")
+            await bot.say(embed=embed)
+            return
+    if triviascore["streak"] == 10:
+        if not role5 in arg.roles:
+            await bot.remove_roles(role4.id)
+            await bot.add_roles(role5.id)
+            embed = discord.Embed(title=arg.name+" has reached "+role5.name+"!")
+            await bot.say(embed=embed)
+            return
+    return
 
 @bot.event
 async def on_ready():
@@ -44,12 +110,43 @@ async def on_ready():
     global rphost
     global rpdoc
     global rpvoid
-    rp = [None, None]
-    rpstarted = [False, False]
-    rptimestarted = [None, None]
-    rphost = [None, None]
-    rpdoc = [None, None]
-    rpvoid = [None, None, None, None]
+    global trivia
+    global triviascore
+    f = open("rp","rb")
+    rpdict = pickle.load(f)
+    f.close
+    rp = rpdict["rp"]
+    rpstarted = rpdict["rpstarted"]
+    rptimestarted = rpdict["rptimestarted"]
+    rphost = rpdict["rphost"]
+    rpdoc = rpdict["rpdoc"]
+    rpvoid = rpdict["rpvoid"]
+    trivia = rpdict["trivia"]
+    triviascore = rpdict["triviascore"]
+
+@bot.command(pass_context=True)
+async def rpdict(ctx):
+    if ctx.message.author.id == "154552600073601024":
+        rpdict = createrpdict()
+        await bot.say(rpdict)
+#returns pickled file
+
+@bot.command(pass_context=True)
+async def syncrpdict(ctx):
+    global rp
+    global rpstarted
+    global rptimestarted
+    global rphost
+    global rpdoc
+    global rpvoid
+    global trivia
+    global triviascore
+    if ctx.message.author.id == "154552600073601024":
+        rpdict = {"rp": rp, "rpstarted": rpstarted, "rptimestarted": rptimestarted, "rphost": rphost, "rpdoc": rpdoc, "rpvoid": rpvoid, "trivia": trivia, "triviascore": triviascore}
+        f = open("rp","wb")
+        pickle.dump(rpdict,f)
+        f.close()
+#updates pickled file
 
 @bot.command(pass_context=True)
 async def whatis(ctx, *, arg):
@@ -59,12 +156,21 @@ async def whatis(ctx, *, arg):
     global rphost
     global rpdoc
     global rpvoid
+    global trivia
+    global triviascore
     if ctx.message.author.id == "154552600073601024":
         arg = arg.split(',')
         if len(arg) == 2:
             index = channelindex(arg[1])
             await bot.say(globals()[arg[0]][index])
 #returns specific value
+
+#@bot.command(pass_context=True)
+#async def owf(ctx, *, arg):
+#    if ctx.message.author.id == "154552600073601024":
+#        owf = ctx.message.channel.overwrites_for(arg)
+#        await bot.say(owf)
+#checks overrides
 
 @bot.command(pass_context=True)
 async def replace(ctx, *, arg):
@@ -74,8 +180,16 @@ async def replace(ctx, *, arg):
     global rphost
     global rpdoc
     global rpvoid
+    global trivia
+    global triviascore
     if ctx.message.author.id == "154552600073601024":
         arg = arg.split(',')
+        if arg[0] == "trivia" or arg[0] == "triviascore":
+            if len(arg) == 2:
+                arg[1] = ast.literal_eval(arg[1])
+                globals()[arg[0]] = arg[1]
+                await bot.say("Replace successful.")
+                return
         if len(arg) == 3:
             index = channelindex(arg[1])
             arg[2] = ast.literal_eval(arg[2])
@@ -83,10 +197,10 @@ async def replace(ctx, *, arg):
                 arg[2] = idToString(arg[2])
             if not arg[0] == "rpvoid":
                 globals()[arg[0]][index] = arg[2]
-            else:
-                await bot.say("Please use .listreplace instead.")
-                return
-            await bot.say("Replace successful.")
+        else:
+            await bot.say("Please use .listreplace instead.")
+            return
+        await bot.say("Replace successful.")
 #replaces specific value
 
 @bot.command(pass_context=True)
@@ -97,6 +211,8 @@ async def arr(ctx):
     global rphost
     global rpdoc
     global rpvoid
+    global trivia
+    global triviascore
     if ctx.message.author.id == "154552600073601024":
         await bot.say(rp)
         await bot.say(rpstarted)
@@ -104,6 +220,8 @@ async def arr(ctx):
         await bot.say(rphost)
         await bot.say(rpdoc)
         await bot.say(rpvoid)
+        await bot.say(trivia)
+        await bot.say(triviascore)
 #returns values for listreplace
 
 @bot.command(pass_context=True)
@@ -114,6 +232,8 @@ async def listreplace(ctx, *, arg):
     global rphost
     global rpdoc
     global rpvoid
+    global trivia
+    global triviascore
     if ctx.message.author.id == "154552600073601024":
         arg = arg.split(',',1)
         if len(arg) == 2 or arg[0] == "rpvoid":
@@ -128,12 +248,28 @@ async def listreplace(ctx, *, arg):
 
 @bot.command(aliases=["dice"])
 async def roll(num):
-    num = int(num)
-    if num < 1 or num > 10000:
-        embed = discord.Embed(title="Please enter a number between 1 and 10000.")
-        await bot.say(embed=embed)
-        return
-    embed = discord.Embed(title=random.randint(1,num))
+    if len(num.split("d")) == 2:
+        d = num.split("d")
+        rolls = 0
+        maxrolls = d[0]
+        maxrolls = int(maxrolls)
+        if maxrolls > 20:
+            maxrolls = 20
+        num = d[1]
+        num = int(num)
+        text = "number"
+        while rolls < maxrolls:
+            if rolls == 0:
+                text = str(random.randint(1,num))
+            else:
+                text = text + ", " + str(random.randint(1,num))
+            rolls = rolls + 1
+    else:
+        if isinstance(int(num), int):
+            text = random.randint(1,int(num))
+        else:
+            return
+    embed = discord.Embed(title=text)
     await bot.say(embed=embed)
 
 @bot.command(aliases=["choose"])
@@ -151,25 +287,37 @@ async def pick(*, arg):
     await bot.say(embed=embed)
 
 @bot.command(pass_context=True,aliases=["rpset"])
-@commands.has_any_role("Staff","Voice","Host")
+@commands.has_any_role("Staff","Trusted","Host")
 async def setrp(ctx,*,roleplay):
     global rp
     global rpstarted
     index = channelindex(ctx.message.channel.name)
+    if "Staff" not in [y.name for y in ctx.message.author.roles] and "Trusted" not in [y.name for y in ctx.message.author.roles]:    
+        if not rphost[index] == ctx.message.author.id:
+            return
     rp[index] = roleplay
+    updaterpdict("rp",rp)
     embed = discord.Embed(title="The RP was set to "+str(roleplay)+". Use .start to start the RP.")
     if rpstarted[index]:
         embed = discord.Embed(title="The RP was set to "+str(roleplay)+".")
+    role = discord.utils.get(ctx.message.server.roles, name="Regular")
+    overwrite = discord.PermissionOverwrite()
+    overwrite.send_messages=None
+    await bot.edit_channel_permissions(ctx.message.channel,role,overwrite)
     await bot.say(embed=embed)
+#    await bot.say("?unlock <#"+ctx.message.channel.id+"> reason")
 
 @bot.command(pass_context=True,aliases=["startrp","rpstart"])
-@commands.has_any_role("Staff","Voice","Host")
+@commands.has_any_role("Staff","Trusted","Host")
 async def start(ctx):
     global rp
     global rpstarted
     global rptimestarted
     global rphost
     index = channelindex(ctx.message.channel.name)
+    if "Staff" not in [y.name for y in ctx.message.author.roles] and "Trusted" not in [y.name for y in ctx.message.author.roles]:    
+        if not rphost[index] == ctx.message.author.id:
+            return
     if rp[index] == None:
         embed = discord.Embed(title="No RP has been set.")
         await bot.say(embed=embed)
@@ -179,8 +327,17 @@ async def start(ctx):
         await bot.say(embed=embed)
         return
     rpstarted[index] = True
+    updaterpdict("rpstarted",rpstarted)
     rptimestarted[index] = time.time()
-    embed = discord.Embed(title="The RP has started.")
+    updaterpdict("rptimestarted",rptimestarted)
+    if index == 0:
+        rprolename = "Official RP"
+    else:
+        if index == 1:
+            rprolename = "Official RP 2"
+        else:
+            rprolename = "Custom RP"
+    embed = discord.Embed(title="The RP has started.",description="Remember to check the pinned messages to get the \"In the "+rprolename+"\" role!")
     await bot.say(embed=embed)
 
 @bot.command(pass_context=True,aliases=["rp","arpee","host","doc"])
@@ -225,7 +382,7 @@ async def roleplay(ctx):
 #        await bot.say(embed=embed)
 
 #@bot.command(pass_context=True,aliases=["vr"])
-#@commands.has_any_role("Staff","Voice")
+#@commands.has_any_role("Staff","Trusted")
 #async def voidreset(ctx):
 #    global rpstarted
 #    global rpvoid
@@ -237,7 +394,7 @@ async def roleplay(ctx):
 #        await bot.say(embed=embed)
 
 #@bot.command(pass_context=True,aliases=["sv"])
-#@commands.has_any_role("Staff","Voice")
+#@commands.has_any_role("Staff","Trusted")
 #async def setvoid(ctx,*,arg):
 #    global rpstarted
 #    global rpvoid
@@ -253,7 +410,7 @@ async def roleplay(ctx):
 #        await bot.say(embed=embed)
 
 @bot.command(pass_context=True,aliases=["rpend"])
-@commands.has_any_role("Staff","Voice","Host")
+@commands.has_any_role("Staff","Trusted","Host")
 async def endrp(ctx):
     global rp
     global rpstarted
@@ -262,7 +419,10 @@ async def endrp(ctx):
     global rpdoc
     global rpvoid
     index = channelindex(ctx.message.channel.name)
-    role = get(ctx.message.server.roles, id="461386257822384138")
+    if "Staff" not in [y.name for y in ctx.message.author.roles] and "Trusted" not in [y.name for y in ctx.message.author.roles]:    
+        if not rphost[index] == ctx.message.author.id:
+            return
+    role = get(ctx.message.server.roles, name="Host")
     if rp[index] == None:
         embed = discord.Embed(title="There is no RP.")
         await bot.say(embed=embed)
@@ -281,59 +441,77 @@ async def endrp(ctx):
 #        else:
 #            embed.add_field(name="Void:",value=rpvoid[2*index+1])
     rp[index] = None
+    updaterpdict("rp",rp)
     rpstarted[index] = False
+    updaterpdict("rpstarted",rpstarted)
     rptimestarted[index] = None
+    updaterpdict("rptimestarted",rptimestarted)
     if not rphost[index] == None:
         host = ctx.message.server.get_member(rphost[index])
-        if "461386257822384138" in [y.id for y in host.roles]:
+        if "Host" in [y.name for y in host.roles]:
             await bot.remove_roles(host,role)
     rphost[index] = None
+    updaterpdict("rphost",rphost)
     rpdoc[index] = None
+    updaterpdict("rpdoc",rpdoc)
+    role = discord.utils.get(ctx.message.server.roles, name="Regular")
+    overwrite = discord.PermissionOverwrite()
+    overwrite.send_messages = False
+    await bot.edit_channel_permissions(ctx.message.channel,role,overwrite)
     await bot.say(embed=embed)
+#    await bot.say("?lock <#"+ctx.message.channel.id+">")
 
 @bot.command(pass_context=True,aliases=["sh"])
-@commands.has_any_role("Staff","Voice")
+@commands.has_any_role("Staff","Trusted")
 async def sethost(ctx,user:discord.Member):
     global rp
     global rphost
     index = channelindex(ctx.message.channel.name)
-    role = get(ctx.message.server.roles, id="461386257822384138")
+    role = get(ctx.message.server.roles, name="Host")
     if rp[index] == None:
         embed = discord.Embed(title="There is no RP.")
         await bot.say(embed=embed)
         return
     if not rphost[index] == None:
         host = ctx.message.server.get_member(rphost[index])
-        if "461386257822384138" in [y.id for y in host.roles]:
+        if role.id in [y.id for y in host.roles]:
             await bot.remove_roles(host,role)
     rphost[index] = user.id
+    updaterpdict("rphost",rphost)
     await bot.add_roles(user,role)
     embed = discord.Embed(title="The host has been set to "+user.display_name+".")
     await bot.say(embed=embed)
 
 @bot.command(pass_context=True,aliases=["sd"])
-@commands.has_any_role("Staff","Voice","Host")
+@commands.has_any_role("Staff","Trusted","Host")
 async def setdoc(ctx, *, doc):
     global rp
     global rphost
     global rpdoc
     index = channelindex(ctx.message.channel.name)
+    if "Staff" not in [y.name for y in ctx.message.author.roles] and "Trusted" not in [y.name for y in ctx.message.author.roles]:    
+        if not rphost[index] == ctx.message.author.id:
+            return
     if rp[index] == None:
         embed = discord.Embed(title="There is no RP.")
         await bot.say(embed=embed)
         return
     doc = str(doc)
     rpdoc[index] = doc
+    updaterpdict("rpdoc",rpdoc)
     embed = discord.Embed(title="The doc has been set to "+doc+".")
     await bot.say(embed=embed)
 
-@bot.command(pass_context=True,aliases=["rmd,rmdoc"])
-@commands.has_any_role("Staff","Voice","Host")
+@bot.command(pass_context=True,aliases=["rmd","rmdoc"])
+@commands.has_any_role("Staff","Trusted","Host")
 async def removedoc(ctx):
     global rp
     global rpdoc
     global rphost
     index = channelindex(ctx.message.channel.name)
+    if "Staff" not in [y.name for y in ctx.message.author.roles] and "Trusted" not in [y.name for y in ctx.message.author.roles]:    
+        if not rphost[index] == ctx.message.author.id:
+            return
     if rp[index] == None:
         embed = discord.Embed(title="There is no RP.")
         await bot.say(embed=embed)
@@ -343,8 +521,128 @@ async def removedoc(ctx):
         await bot.say(embed=embed)
         return
     rpdoc[index] = None
+    updaterpdict("rpdoc",rpdoc)
     embed = discord.Embed(title="The doc has been removed.")
     await bot.say(embed=embed)
+
+@bot.command(pass_context=True,aliases=["starttrivia","ts","st"])
+@commands.has_any_role("Staff","Trusted")
+async def triviastart(ctx):
+    global trivia
+    global triviascore
+    if ctx.message.channel.name != "game-corner":
+        embed = discord.Embed(title="This command only works in the Trivia room.")
+        await bot.say(embed=embed)
+        return
+    if trivia == True:
+        embed = discord.Embed(title="Trivia has already started.")
+        await bot.say(embed=embed)
+        return
+    trivia = True
+    triviascore = {
+        "lastuser":None,
+        "streak":0
+    }
+    overwrite = discord.PermissionOverwrite()
+    overwrite.send_messages = None
+    role = discord.utils.get(ctx.message.server.roles, name="Regular")
+    await bot.edit_channel_permissions(ctx.message.channel,role,overwrite)
+    embed = discord.Embed(title="Trivia has started.")
+    updaterpdict("trivia",trivia)
+    updaterpdict("triviascore",triviascore)
+    await bot.say(embed=embed)
+
+@bot.command(pass_context=True,aliases=["answertrivia","at","ta"])
+@commands.has_any_role("Staff","Trusted")
+async def triviaanswer(ctx,user:discord.Member):
+    global trivia
+    global triviascore
+    if ctx.message.channel.name != "game-corner":
+        embed = discord.Embed(title="This command only works in the Trivia room.")
+        await bot.say(embed=embed)
+        return
+    if trivia == False:
+        embed = discord.Embed(title="Trivia is not running.")
+        await bot.say(embed=embed)
+        return
+    if user.id in triviascore:
+        triviascore[user.id] += 1
+    else:
+        triviascore[user.id] = 1
+    if triviascore["lastuser"] == user.id:
+        triviascore["streak"] += 1
+    else:
+        triviascore["lastuser"] = user.id
+        triviascore["streak"] = 1
+    embed = discord.Embed(title="The point has been awarded to "+user.name+".")
+    await bot.say(embed=embed)
+    await updatetriviarole(user,ctx.message.server)
+    embed = discord.Embed(title="Scoreboard")
+    for k in sorted(triviascore,key=itemgetter(1)):
+        if k != "lastuser" and k != "streak":
+            name = discord.utils.get(ctx.message.server.members,id=k)
+            score = triviascore[k]
+            embed.add_field(name=name,value=score,inline=False)
+    updaterpdict("triviascore",triviascore)
+    await bot.say(embed=embed)
+
+@bot.command(pass_context=True,aliases=["sb"])
+@commands.has_any_role("Staff","Trusted")
+async def scoreboard(ctx):
+    global trivia
+    global triviascore
+    if ctx.message.channel.name != "game-corner":
+        embed = discord.Embed(title="This command only works in the Trivia room.")
+        await bot.say(embed=embed)
+        return
+    if trivia == False:
+        embed = discord.Embed(title="Trivia is not running.")
+        await bot.say(embed=embed)
+        return
+    tempts = triviascore
+    del tempts["lastuser"]
+    del tempts["streak"]
+    embed = discord.Embed(title="Scoreboard")
+    for k in sorted(triviascore,key=itemgetter(1)):
+        if k != "lastuser" and k != "streak":
+            name = discord.utils.get(ctx.message.server.members,id=k)
+            score = triviascore[k]
+            embed.add_field(name=name,value=score,inline=False)
+    await bot.say(embed=embed)
+
+@bot.command(pass_context=True,aliases=["endtrivia","te","et"])
+@commands.has_any_role("Staff","Trusted")
+async def triviaend(ctx):
+    global trivia
+    global triviascore
+    if ctx.message.channel.name != "game-corner":
+        embed = discord.Embed(title="This command only works in the Trivia room.")
+        await bot.say(embed=embed)
+        return
+    if trivia == False:
+        embed = discord.Embed(title="Trivia is not running.")
+        await bot.say(embed=embed)
+        return
+    embed2 = discord.Embed(title="Scoreboard")
+    for k in sorted(triviascore,key=itemgetter(1)):
+        if k != "lastuser" and k != "streak":
+            name = discord.utils.get(ctx.message.server.members,id=k)
+            score = triviascore[k]
+            embed2.add_field(name=name,value=score,inline=False)
+    trivia = False
+    triviascore = {
+        "lastuser":None,
+        "streak":0
+    }
+    overwrite = discord.PermissionOverwrite()
+    overwrite.send_messages = False
+    role = discord.utils.get(ctx.message.server.roles, name="Regular")
+    await bot.edit_channel_permissions(ctx.message.channel,role,overwrite)
+    embed = discord.Embed(title="Trivia has ended.")
+    updaterpdict("trivia",trivia)
+    updaterpdict("triviascore",triviascore)
+    await bot.say(embed=embed)
+    await bot.say(embed=embed2)
 
 bot.run("insert token here")
 #host role id is 461386257822384138
