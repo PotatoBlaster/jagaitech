@@ -32,7 +32,7 @@ def idToString(arg):
 #for listreplace to work properly
 
 def channelindex(arg):
-    rplist = ['official-rp','official-rp-2','custom-rp']
+    rplist = ['official-rp','rusty-rp','custom-rp']
     if arg in rplist:
         return rplist.index(arg)
 #check channel
@@ -109,6 +109,8 @@ async def on_ready():
     global rptimestarted
     global rphost
     global rpdoc
+    global rpr
+    global rprmember
     global rpvoid
     global trivia
     global triviascore
@@ -123,6 +125,8 @@ async def on_ready():
     rpvoid = rpdict["rpvoid"]
     trivia = rpdict["trivia"]
     triviascore = rpdict["triviascore"]
+    rpr = False
+    rprmember = None
 
 @bot.command(pass_context=True)
 async def rpdict(ctx):
@@ -334,7 +338,7 @@ async def start(ctx):
         rprolename = "Official RP"
     else:
         if index == 1:
-            rprolename = "Official RP 2"
+            rprolename = "Rusty RP"
         else:
             rprolename = "Custom RP"
     embed = discord.Embed(title="The RP has started.",description="Remember to check the pinned messages to get the \"In the "+rprolename+"\" role!")
@@ -462,7 +466,7 @@ async def endrp(ctx):
 #    await bot.say("?lock <#"+ctx.message.channel.id+">")
 
 @bot.command(pass_context=True,aliases=["sh"])
-@commands.has_any_role("Staff","Trusted")
+@commands.has_any_role("Staff","Trusted","Host")
 async def sethost(ctx,user:discord.Member):
     global rp
     global rphost
@@ -643,6 +647,48 @@ async def triviaend(ctx):
     updaterpdict("triviascore",triviascore)
     await bot.say(embed=embed)
     await bot.say(embed=embed2)
+
+@bot.command(pass_context=True,aliases=["rpr","roleplayreviewer"])
+@commands.has_any_role("Host")
+async def roleplayreview(ctx):
+    global rp
+    global rpr
+    global rprmember
+    global rphost
+    index = channelindex(ctx.message.channel.name)
+    if rpr:
+        embed = discord.Embed(title="Please wait for RPR to end before using it again.")
+        await bot.say(embed=embed)
+        return
+    if rp[index] == None:
+        embed = discord.Embed(title="There is no RP.")
+        await bot.say(embed=embed)
+        return
+    if rphost[index] == None:
+        embed = discord.Embed(title="There is no host.")
+        await bot.say(embed=embed)
+        return
+    rprmember = ctx.message.server.get_member(rphost[index])
+    rpr = True
+    embed = discord.Embed(title="Roleplay review is now active. For the next 10 minutes, messages to the bot will be forwarded to the host anonymously.",description="Note that messages sent to the bot during Roleplay Review are subject to the rules of the server and logged for moderation purposes.")
+    await bot.say(embed=embed)
+    await asyncio.sleep(600)
+    rprmember = None
+    rpr = False
+    embed = discord.Embed(title="Roleplay Review has ended.")
+    await bot.say(embed=embed)
+
+@bot.event
+async def on_message(message):
+    global rpr
+    global rprmember
+    if rpr:
+        channel = bot.get_channel("461290964384874507")
+        if message.server is None and message.author != bot.user:
+            embed = discord.Embed(title="RPR: "+message.author.name+"("+message.author.id+")"+" to "+rprmember.name+"("+rprmember.id+")",description=message.content)
+            await bot.send_message(channel,embed=embed)
+            await bot.send_message(rprmember,message.content)
+    await bot.process_commands(message)
 
 bot.run("insert token here")
 #host role id is 461386257822384138
